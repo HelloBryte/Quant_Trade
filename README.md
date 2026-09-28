@@ -45,6 +45,10 @@ tests/          fill-model unit tests, strategy tests, end-to-end pipeline tests
 pip install -e ".[dev]"
 pytest                                   # 24 tests, no network needed
 
+# offline: 5 minutes of real Binance data ship in samples/
+python -m mmsim backtest --data samples/binance_SOLUSDT_5min.jsonl.gz --strategy as_signal -p beta_imb=0.6
+python -m mmsim sweep --data samples/binance_BTCUSDT_5min.jsonl.gz --latencies 5,50,200
+
 # offline: synthetic market with a known lead-lag
 python -m mmsim synth --out data/synthetic.jsonl.gz
 python -m mmsim backtest --data data/synthetic.jsonl.gz --strategy as
