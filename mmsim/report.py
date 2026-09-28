@@ -139,7 +139,8 @@ def summary_markdown(sm: dict) -> str:
         *[f"| {k} | {_fmt(v)} |" for k, v in sm["fee_scenarios"].items()], "",
         "| Markout horizon | " + " | ".join(_horizon_labels(mk)) + " |",
         "|---|" + "---:|" * len(mk),
-        "| bps | " + " | ".join(_fmt(v) for v in mk.values()) + " |", "",
+        "| bps | " + " | ".join(_fmt(v) for v in mk.values()) + " |",
+        "| s.e. | " + " | ".join(_fmt(v) for v in sm.get("markout_se_bps", {}).values()) + " |", "",
         f"- Inventory: mean |lots| {_fmt(sm['avg_abs_lots'])}, max |lots| {_fmt(sm['max_abs_lots'])}",
         f"- Gross PnL std per minute: {_fmt(sm['pnl_per_min_std'], 3)} USDT, max drawdown: {_fmt(sm['max_drawdown'], 3)} USDT",
     ]
@@ -206,6 +207,11 @@ def latency_chart(rows: list[dict], path: Path, title: str) -> None:
     plt.close(fig)
 
 
+def _markout_cell(r: dict, h: float) -> str:
+    v, se = r["markout_bps"].get(h), r.get("markout_se_bps", {}).get(h)
+    return _fmt(v) if se is None else f"{_fmt(v)} ± {se:.2f}"
+
+
 def sweep_table(rows: list[dict]) -> str:
     # show only the parameters that differ between rows
     keys = sorted({k for r in rows for k in r.get("params", {})})
@@ -214,7 +220,7 @@ def sweep_table(rows: list[dict]) -> str:
         len({r["params"][k] for r in rows if r["strategy"] == g and k in r.get("params", {})}) > 1 for g in groups)]
     pcol = " params |" if varying else ""
     head = (f"| strategy | latency ms |{pcol} fills | spread capture bp | inventory bp "
-            "| gross = break-even fee bp | gross USDT | markout 5s bp | mean abs lots |")
+            "| gross = break-even fee bp | gross USDT | markout 5s bp (± s.e.) | mean abs lots |")
     lines = [head, "|---|---:|" + ("---|" if varying else "") + "---:|" * 7]
     for r in rows:
         shown = [f"{k}={r['params'][k]:g}" for k in varying if k in r.get("params", {})]
@@ -222,7 +228,7 @@ def sweep_table(rows: list[dict]) -> str:
         lines.append(
             f"| {STRATEGY_LABEL.get(r['strategy'], r['strategy'])} | {r['latency_ms']:g} |{pv} {r['fills']} "
             f"| {_fmt(r['spread_capture_bps'])} | {_fmt(r['inventory_bps'])} | {_fmt(r['breakeven_fee_bps'])} "
-            f"| {_fmt(r['pnl_gross'])} | {_fmt(r['markout_bps'].get(5.0))} | {_fmt(r['avg_abs_lots'])} |")
+            f"| {_fmt(r['pnl_gross'])} | {_markout_cell(r, 5.0)} | {_fmt(r['avg_abs_lots'])} |")
     return "\n".join(lines) + "\n"
 
 

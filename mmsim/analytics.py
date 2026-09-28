@@ -47,18 +47,22 @@ def markouts(result: RunResult, horizons=MARKOUT_HORIZONS_S) -> pd.DataFrame:
     rows = []
     for h in horizons:
         if f.empty:
-            rows.append((h, np.nan, 0))
+            rows.append((h, np.nan, np.nan, 0))
             continue
         t = f["ts"].to_numpy() + int(h * 1e9)
         ok = t <= end  # drop fills too close to the end of the data
         if not ok.any():
-            rows.append((h, np.nan, 0))
+            rows.append((h, np.nan, np.nan, 0))
             continue
         side, px, qty = f["side"].to_numpy()[ok], f["price"].to_numpy()[ok], f["qty"].to_numpy()[ok]
         m = mid_at(result, t[ok])
         bps = side * (m - px) / px * 1e4
-        rows.append((h, float(np.average(bps, weights=qty)), int(ok.sum())))
-    return pd.DataFrame(rows, columns=["horizon_s", "markout_bps", "n"])
+        mean = float(np.average(bps, weights=qty))
+        n = int(ok.sum())
+        # standard error of the mean; fills close in time are correlated, so read it as a lower bound
+        se = float(np.sqrt(np.average((bps - mean) ** 2, weights=qty) / (n - 1))) if n > 1 else np.nan
+        rows.append((h, mean, se, n))
+    return pd.DataFrame(rows, columns=["horizon_s", "markout_bps", "se_bps", "n"])
 
 
 def decompose(result: RunResult) -> dict:
@@ -81,7 +85,8 @@ def summarize(result: RunResult) -> dict:
     notional = d["notional"]
     order_notional = meta["params"].get("order_notional", np.nan)
     lots = s["position"] * s["mid"] / order_notional
-    mk = markouts(result).set_index("horizon_s")["markout_bps"]
+    mkt = markouts(result).set_index("horizon_s")
+    mk = mkt["markout_bps"]
     pnl_min = s.set_index(pd.to_datetime(s["ts"], unit="ns"))["pnl_gross"].resample("1min").last().diff().dropna()
     out = {
         "strategy": meta["strategy"],
@@ -104,6 +109,7 @@ def summarize(result: RunResult) -> dict:
         "pnl_per_min_std": float(pnl_min.std()) if len(pnl_min) > 1 else np.nan,
         "max_drawdown": float((s["pnl_gross"].cummax() - s["pnl_gross"]).max()) if len(s) else np.nan,
         "markout_bps": {float(k): (None if pd.isna(v) else float(v)) for k, v in mk.items()},
+        "markout_se_bps": {float(k): (None if pd.isna(v) else float(v)) for k, v in mkt["se_bps"].items()},
     }
     out["fee_scenarios"] = {name: d["gross"] - fee * 1e-4 * notional for name, fee in FEE_SCENARIOS_BPS.items()}
     return out
