@@ -92,6 +92,13 @@ moved against us after the fill.
 
 ![live dashboard BTC v2](results/live_dashboard_BTC_v2.png)
 
+For contrast, SOL v0 has no inventory control: it drifts to its 5-lot limit
+(briefly past it, while replaced orders are still in flight), and the short
+position it is carrying when SOL rallies in the last minutes costs about
+1.5 USDT at once.
+
+![live dashboard SOL v0](results/live_dashboard_SOL_v0.png)
+
 Net PnL for the hour under different maker fees (USDT):
 
 | Maker fee | BTC v0 | BTC v1 | BTC v2 | SOL v0 | SOL v1 | SOL v2 |
