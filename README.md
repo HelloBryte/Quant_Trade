@@ -10,12 +10,21 @@ real orders) and as a **replay backtest** on recorded sessions. Both go through
 the same event-driven engine, so replaying a recorded paper session reproduces
 it fill for fill.
 
-**Headline results** are in [RESULTS.md](RESULTS.md). In short: on Binance
-BTC/USDT and SOL/USDT spot, every strategy loses about 1 to 2 bps of traded
-notional *before* fees, because fills cluster right before adverse price moves.
-A short-term fair-value signal (top-of-book imbalance) cuts that loss, but no
-retail fee tier leaves room for profit. That matches how the business actually
-works: the edge is in fees, flow and speed, not in the textbook quoting formula.
+**Headline results** are in [RESULTS.md](RESULTS.md). In short, from two
+60-minute live sessions and 40 minutes of out-of-sample replay on Binance
+BTC/USDT and SOL/USDT spot:
+
+- Every strategy lost 0.35 to 2 bps of traded notional *before* fees. Fills
+  are about 1 to 1.5 bps under water five seconds later: adverse selection.
+- Breaking even would take a maker rebate of 1.2 to 2 bps; at retail spot fees
+  the loss is 6 to 9 times larger.
+- Inventory control cut inventory 5 to 8 times. A top-of-book imbalance signal
+  predicts about 11% of 1-second spot variance, but did not reliably reduce the
+  loss live. The perp did not lead spot.
+- Replaying the live sessions reproduces 1,573 of 1,573 fills exactly.
+
+That matches how the business works: the edge is in fees, order flow and
+speed, not in the textbook quoting formula.
 
 A Chinese walkthrough of the concepts and code is in
 [docs/guide_zh.md](docs/guide_zh.md).
@@ -43,7 +52,7 @@ tests/          fill-model unit tests, strategy tests, end-to-end pipeline tests
 
 ```bash
 pip install -e ".[dev]"
-pytest                                   # 24 tests, no network needed
+pytest                                   # 25 tests, no network needed
 
 # offline: 5 minutes of real Binance data ship in samples/
 python -m mmsim backtest --data samples/binance_SOLUSDT_5min.jsonl.gz --strategy as_signal -p beta_imb=0.6

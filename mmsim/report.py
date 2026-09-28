@@ -63,7 +63,7 @@ def dashboard(result: RunResult, summary: dict, path: Path) -> None:
     ax.yaxis.set_major_formatter(matplotlib.ticker.StrMethodFormatter(f"{{x:,.{nd}f}}"))
     ax.set_title("Price and our fills")
     ax.set_xlabel("minutes")
-    ax.legend(loc="upper left", ncols=3)
+    ax.legend(loc="best", ncols=3)
 
     ax = axes[0, 1]
     lots = s["position"] * s["mid"] / result.meta["params"]["order_notional"]
@@ -88,7 +88,7 @@ def dashboard(result: RunResult, summary: dict, path: Path) -> None:
     ax.axhline(0, color=AXIS, lw=1)
     ax.set_title("Cumulative PnL decomposition (USDT)")
     ax.set_xlabel("minutes")
-    ax.legend(loc="upper left", ncols=len(series))
+    ax.legend(loc="best", ncols=2)
 
     ax = axes[1, 1]
     mk = markouts(result)
@@ -163,7 +163,8 @@ def sweep_markouts(rows: list[dict], path: Path) -> None:
     """Small multiples: one panel per latency, one line per strategy."""
     _style()
     lats = sorted({r["latency_ms"] for r in rows})
-    fig, axes = plt.subplots(1, len(lats), figsize=(4.4 * len(lats), 3.8), sharey=True, constrained_layout=True)
+    fig, axes = plt.subplots(1, len(lats), figsize=(max(4.4 * len(lats), 7.5), 3.8), sharey=True,
+                             constrained_layout=True)
     axes = np.atleast_1d(axes)
     x = np.arange(len(MARKOUT_HORIZONS_S))
     for ax, lat in zip(axes, lats):
