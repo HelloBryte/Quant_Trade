@@ -11,7 +11,7 @@ from pathlib import Path
 
 from .analytics import summarize
 from .engine import EngineConfig, run
-from .report import df_markdown, research_chart, summary_markdown, sweep_markouts, sweep_table, write_run
+from .report import df_markdown, latency_chart, research_chart, summary_markdown, sweep_markouts, sweep_table, write_run
 from .storage import Recorder, clip, read_meta, replay
 from .strategies import STRATEGIES, accepted_params, make_strategy
 
@@ -161,6 +161,10 @@ def cmd_sweep(a) -> None:
     if len(grid) > 1:
         rows.sort(key=lambda r: -r["pnl_gross"])
     _write_comparison(rows, out, f"Sweep: {meta['venue']} {meta['symbol']}", note)
+    if len(latencies) > 1 and len(grid) == 1:
+        latency_chart(rows, out / "latency.png", f"{meta['symbol']}: does being faster help?")
+        with open(out / "README.md", "a") as f:
+            f.write("\n![latency](latency.png)\n")
     print(f"sweep written to {out}")
 
 

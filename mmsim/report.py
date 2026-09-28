@@ -183,10 +183,35 @@ def sweep_markouts(rows: list[dict], path: Path) -> None:
     plt.close(fig)
 
 
+def latency_chart(rows: list[dict], path: Path, title: str) -> None:
+    """Gross PnL per notional (= break-even maker fee) against latency, one line per strategy."""
+    _style()
+    fig, ax = plt.subplots(figsize=(7.5, 4.2), constrained_layout=True)
+    for strat in dict.fromkeys(r["strategy"] for r in rows):
+        rs = sorted((r for r in rows if r["strategy"] == strat), key=lambda r: r["latency_ms"])
+        x = [r["latency_ms"] for r in rs]
+        y = [r["breakeven_fee_bps"] for r in rs]
+        ax.plot(x, y, color=STRATEGY_COLOR.get(strat, MUTED), marker="o", ms=5, mec=SURFACE, mew=1.5,
+                label=STRATEGY_LABEL.get(strat, strat))
+    ax.axhline(0, color=AXIS, lw=1)
+    ax.set_xscale("log")
+    lats = sorted({r["latency_ms"] for r in rows})
+    ax.set_xticks(lats, [f"{v:g}" for v in lats])
+    ax.minorticks_off()
+    ax.set_xlabel("latency (ms, log scale)")
+    ax.set_ylabel("gross PnL per notional (bps)")
+    ax.set_title(title)
+    ax.legend(loc="best")
+    fig.savefig(path, dpi=130)
+    plt.close(fig)
+
+
 def sweep_table(rows: list[dict]) -> str:
     # show only the parameters that differ between rows
     keys = sorted({k for r in rows for k in r.get("params", {})})
-    varying = [k for k in keys if len({r.get("params", {}).get(k) for r in rows}) > 1]
+    groups = {r["strategy"] for r in rows}
+    varying = [k for k in keys if any(
+        len({r["params"][k] for r in rows if r["strategy"] == g and k in r.get("params", {})}) > 1 for g in groups)]
     pcol = " params |" if varying else ""
     head = (f"| strategy | latency ms |{pcol} fills | spread capture bp | inventory bp "
             "| gross = break-even fee bp | gross USDT | markout 5s bp | mean abs lots |")
